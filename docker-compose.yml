@@ -1,0 +1,52 @@
+version: '3.2'
+services:
+  project_php:
+    container_name: project_php
+    image: project:latest
+    build:
+      dockerfile: php/Dockerfile
+    volumes:
+      - ./app:/var/www/app/:rw
+      - ./logs:/var/log/apache2/
+      - ./apache_conf:/etc/apache2/sites-enabled/:ro
+      - ./certs:/etc/ssl/certs/:ro
+    ports:
+      - '80:80'
+      - '443:443'
+    networks:
+      - project_network
+    depends_on:
+      - project_mysql
+  project_composer:
+    image: composer/composer:2.5.5
+  project_mysql:
+    container_name: project_mysql
+    image: mariadb:10.3
+    ports:
+      - '3306:3306'
+    env_file:
+      - .env
+    volumes:
+      - project_mysql_data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      - project_network
+
+  pma:
+    container_name: project_pma
+    image: phpmyadmin:5.2.1
+    ports:
+      - '8080:80'
+    environment:
+      PMA_HOST: project_mysql
+      UPLOAD_LIMIT: 1024M
+    depends_on:
+      - project_mysql
+    networks:
+      - project_network
+
+volumes:
+  project_mysql_data:
+networks:
+  project_network:
+    driver: bridge
